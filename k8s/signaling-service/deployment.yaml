@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: signaling-service
+  namespace: live-stream
+  labels:
+    app: signaling-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: signaling-service
+  template:
+    metadata:
+      labels:
+        app: signaling-service
+    spec:
+      containers:
+        - name: signaling-service
+          image: 585768182430.dkr.ecr.us-east-1.amazonaws.com/streamx-signaling-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 4003
+              name: http
+          envFrom:
+            - configMapRef:
+                name: signaling-service-config
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4003
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4003
+            initialDelaySeconds: 15
+            periodSeconds: 10

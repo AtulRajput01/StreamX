@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: meeting-service
+  namespace: live-stream
+  labels:
+    app: meeting-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: meeting-service
+  template:
+    metadata:
+      labels:
+        app: meeting-service
+    spec:
+      containers:
+        - name: meeting-service
+          image: 585768182430.dkr.ecr.us-east-1.amazonaws.com/streamx-meeting-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 4002
+              name: http
+          envFrom:
+            - configMapRef:
+                name: meeting-service-config
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4002
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4002
+            initialDelaySeconds: 15
+            periodSeconds: 10

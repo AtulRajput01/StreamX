@@ -1,0 +1,37 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: live-stream
+
+resources:
+  - namespace.yaml
+  # Databases & Stateful Messaging (StatefulSets)
+  - postgres/pv.yaml
+  - postgres/pvc.yaml
+  - postgres/statefulset.yaml
+  - postgres/service.yaml
+  - redis/pv.yaml
+  - redis/pvc.yaml
+  - redis/statefulset.yaml
+  - redis/service.yaml
+  - redpanda/pv.yaml
+  - redpanda/pvc.yaml
+  - redpanda/statefulset.yaml
+  - redpanda/service.yaml
+  # Microservices
+  - auth-service/configmap.yaml
+  - auth-service/deployment.yaml
+  - auth-service/service.yaml
+  - meeting-service/configmap.yaml
+  - meeting-service/deployment.yaml
+  - meeting-service/service.yaml
+  - signaling-service/configmap.yaml
+  - signaling-service/deployment.yaml
+  - signaling-service/service.yaml
+  - api-gateway/configmap.yaml
+  - api-gateway/deployment.yaml
+  - api-gateway/service.yaml
+  - frontend-web/deployment.yaml
+  - frontend-web/service.yaml
+  # Ingress
+  - ingress.yaml

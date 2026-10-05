@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: signaling-service-config
+  namespace: live-stream
+data:
+  PORT: "4003"
+  REDIS_URL: "redis://redis-service:6379"
