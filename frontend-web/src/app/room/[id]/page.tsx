@@ -26,6 +26,7 @@ export default function Room() {
   
   const peersRef = useRef<Map<string, RTCPeerConnection>>(new Map());
   const peerNamesRef = useRef<Map<string, string>>(new Map());
+  const peerStreamsRef = useRef<Map<string, MediaStream>>(new Map());
 
   // 1. Preview Camera on Mount
   useEffect(() => {
@@ -40,14 +41,21 @@ export default function Room() {
 
     const initCamera = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+        });
         localStreamRef.current = stream;
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = stream;
         }
       } catch (err) {
-        console.warn('Camera access blocked or not available', err);
-        setCameraError('Camera access blocked (requires HTTPS or localhost). You will join as a viewer.');
+        console.warn('Camera/Microphone access blocked or not available', err);
+        setCameraError('Camera/Microphone access blocked. You will join as a viewer.');
       }
     };
 
@@ -206,7 +214,19 @@ export default function Room() {
     };
 
     pc.ontrack = (event) => {
-      const stream = event.streams && event.streams[0] ? event.streams[0] : new MediaStream([event.track]);
+      console.log(`[WebRTC] Received track (${event.track.kind}) from ${targetId}`);
+      let stream: MediaStream;
+      if (event.streams && event.streams[0]) {
+        stream = event.streams[0];
+      } else {
+        let existingStream = peerStreamsRef.current.get(targetId);
+        if (!existingStream) {
+          existingStream = new MediaStream();
+          peerStreamsRef.current.set(targetId, existingStream);
+        }
+        existingStream.addTrack(event.track);
+        stream = existingStream;
+      }
       updatePeerStream(targetId, stream);
     };
 
@@ -214,6 +234,7 @@ export default function Room() {
       if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed' || pc.connectionState === 'closed') {
         removePeerFromState(targetId);
         peersRef.current.delete(targetId);
+        peerStreamsRef.current.delete(targetId);
       }
     };
 
@@ -241,7 +262,7 @@ export default function Room() {
 
   const toggleMic = () => {
     if (!localStreamRef.current) {
-      alert('Your browser blocked microphone access because you are not on localhost or HTTPS. You are in Viewer Mode.');
+      alert('Your browser blocked microphone access. You are in Viewer Mode.');
       return;
     }
     const audioTrack = localStreamRef.current.getAudioTracks()[0];
@@ -253,7 +274,7 @@ export default function Room() {
 
   const toggleCamera = () => {
     if (!localStreamRef.current) {
-      alert('Your browser blocked camera access because you are not on localhost or HTTPS. You are in Viewer Mode.');
+      alert('Your browser blocked camera access. You are in Viewer Mode.');
       return;
     }
     const videoTrack = localStreamRef.current.getVideoTracks()[0];
@@ -266,13 +287,25 @@ export default function Room() {
   const RemotePeer = ({ peer }: { peer: { id: string, name: string, stream: MediaStream | null } }) => {
     const ref = useRef<HTMLVideoElement>(null);
     useEffect(() => {
-      if (ref.current && peer.stream) ref.current.srcObject = peer.stream;
+      if (ref.current && peer.stream) {
+        ref.current.srcObject = peer.stream;
+        ref.current.volume = 1.0;
+        ref.current.play().catch(err => {
+          console.warn('Remote peer media play error:', err);
+        });
+      }
     }, [peer.stream]);
 
     return (
       <div className="glass-card" style={{ background: 'rgba(0,0,0,0.8)', borderRadius: '16px', overflow: 'hidden', minHeight: '300px', position: 'relative' }}>
         {peer.stream ? (
-          <video ref={ref} autoPlay playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <video 
+            ref={ref} 
+            autoPlay 
+            playsInline 
+            controls={false}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+          />
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-secondary)' }}>
             No video from {peer.name}
