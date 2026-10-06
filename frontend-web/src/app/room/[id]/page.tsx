@@ -70,7 +70,7 @@ export default function Room() {
     const socketUrl = process.env.NEXT_PUBLIC_SIGNALING_URL || (typeof window !== 'undefined' ? window.location.origin : '');
     const socket = io(socketUrl, {
       path: '/socket.io',
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'],
     });
     socketRef.current = socket;
 
