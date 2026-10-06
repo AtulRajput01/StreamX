@@ -49,21 +49,33 @@ export default function Room() {
             autoGainControl: true
           }
         });
+        console.log('[Media] UserMedia acquired:', {
+          audio: stream.getAudioTracks().map(t => ({ label: t.label, enabled: t.enabled, readyState: t.readyState })),
+          video: stream.getVideoTracks().map(t => ({ label: t.label, enabled: t.enabled, readyState: t.readyState }))
+        });
         localStreamRef.current = stream;
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = stream;
         }
       } catch (err) {
-        console.warn('Camera/Microphone access blocked or not available', err);
-        setCameraError('Camera/Microphone access blocked. You will join as a viewer.');
+        console.warn('Combined getUserMedia failed, trying fallback...', err);
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          localStreamRef.current = stream;
+          if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+        } catch (err2) {
+          try {
+            const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            localStreamRef.current = audioStream;
+          } catch (err3) {
+            console.warn('Camera/Microphone access blocked', err3);
+            setCameraError('Camera/Microphone access blocked. You will join as a viewer.');
+          }
+        }
       }
     };
 
     initCamera();
-
-    return () => {
-      localStreamRef.current?.getTracks().forEach(track => track.stop());
-    };
   }, [router]);
 
   // 2. Join Room Logic
@@ -239,17 +251,26 @@ export default function Room() {
     };
 
     if (localStreamRef.current) {
-      const audioTrack = localStreamRef.current.getAudioTracks()[0];
-      const videoTrack = localStreamRef.current.getVideoTracks()[0];
+      const audioTracks = localStreamRef.current.getAudioTracks().filter(t => t.readyState === 'live');
+      const videoTracks = localStreamRef.current.getVideoTracks().filter(t => t.readyState === 'live');
 
-      if (audioTrack) {
-        pc.addTrack(audioTrack, localStreamRef.current);
+      if (audioTracks.length > 0) {
+        audioTracks.forEach(t => {
+          t.enabled = true;
+          console.log(`[WebRTC] Adding live local audio track (${t.label}) to peer ${targetId}`);
+          pc.addTrack(t, localStreamRef.current!);
+        });
       } else {
+        console.warn(`[WebRTC] No live local audio track found for peer ${targetId}, adding recvonly audio transceiver`);
         pc.addTransceiver('audio', { direction: 'recvonly' });
       }
 
-      if (videoTrack) {
-        pc.addTrack(videoTrack, localStreamRef.current);
+      if (videoTracks.length > 0) {
+        videoTracks.forEach(t => {
+          t.enabled = true;
+          console.log(`[WebRTC] Adding live local video track (${t.label}) to peer ${targetId}`);
+          pc.addTrack(t, localStreamRef.current!);
+        });
       } else {
         pc.addTransceiver('video', { direction: 'recvonly' });
       }
