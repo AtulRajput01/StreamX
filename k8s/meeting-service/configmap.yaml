@@ -5,5 +5,3 @@ metadata:
   namespace: live-stream
 data:
   PORT: "4002"
-  JWT_SECRET: "super_secret_wave_key_2026"
-  DATABASE_URL: "postgresql://atul:Atul9690%40m3@postgres-service:5432/streamx?schema=meetings"

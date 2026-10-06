@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-web-config
+  namespace: live-stream
+data:
+  PORT: "3000"
+  NEXT_PUBLIC_API_URL: "https://stream.atulrajput.space"
+  NEXT_PUBLIC_SIGNALING_URL: "https://stream.atulrajput.space"

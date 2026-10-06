@@ -20,9 +20,11 @@ resources:
   - redpanda/service.yaml
   # Microservices
   - auth-service/configmap.yaml
+  - auth-service/secret.yaml
   - auth-service/deployment.yaml
   - auth-service/service.yaml
   - meeting-service/configmap.yaml
+  - meeting-service/secret.yaml
   - meeting-service/deployment.yaml
   - meeting-service/service.yaml
   - signaling-service/configmap.yaml
@@ -31,6 +33,7 @@ resources:
   - api-gateway/configmap.yaml
   - api-gateway/deployment.yaml
   - api-gateway/service.yaml
+  - frontend-web/configmap.yaml
   - frontend-web/deployment.yaml
   - frontend-web/service.yaml
   # Ingress

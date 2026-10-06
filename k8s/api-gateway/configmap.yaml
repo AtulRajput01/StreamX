@@ -5,6 +5,6 @@ metadata:
   namespace: live-stream
 data:
   PORT: "4000"
-  AUTH_SERVICE_URL: "http://auth-service:4001"
-  MEETING_SERVICE_URL: "http://meeting-service:4002"
-  SIGNALING_SERVICE_URL: "http://signaling-service:4003"
+  AUTH_SERVICE_URL: "http://auth-service"
+  MEETING_SERVICE_URL: "http://meeting-service"
+  SIGNALING_SERVICE_URL: "http://signaling-service"

@@ -4,14 +4,14 @@ metadata:
   name: live-stream-ingress
   namespace: live-stream
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
     nginx.ingress.kubernetes.io/websocket-services: "signaling-service"
 spec:
   ingressClassName: nginx
   rules:
-    - http:
+    - host: stream.atulrajput.space
+      http:
         paths:
           - path: /api
             pathType: Prefix
@@ -19,18 +19,18 @@ spec:
               service:
                 name: api-gateway
                 port:
-                  number: 4000
+                  number: 80
           - path: /socket.io
             pathType: Prefix
             backend:
               service:
                 name: signaling-service
                 port:
-                  number: 4003
+                  number: 80
           - path: /
             pathType: Prefix
             backend:
               service:
                 name: frontend-web
                 port:
-                  number: 3000
+                  number: 80

@@ -25,6 +25,8 @@ spec:
           envFrom:
             - configMapRef:
                 name: meeting-service-config
+            - secretRef:
+                name: meeting-service-secret
           readinessProbe:
             httpGet:
               path: /health

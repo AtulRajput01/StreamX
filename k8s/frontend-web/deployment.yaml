@@ -22,9 +22,9 @@ spec:
           ports:
             - containerPort: 3000
               name: http
-          env:
-            - name: PORT
-              value: "3000"
+          envFrom:
+            - configMapRef:
+                name: frontend-web-config
           readinessProbe:
             httpGet:
               path: /
