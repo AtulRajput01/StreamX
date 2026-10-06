@@ -78,22 +78,22 @@ export default function Room() {
       setMessages(prev => [...prev, { sender: 'System', text: `${name || 'A peer'} joined the room.` }]);
       peerNamesRef.current.set(userId, name || 'Unknown');
       addPeerToState(userId, name || 'Unknown');
+
+      const pc = createPeerConnection(userId);
+      try {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        socket.emit('webrtc-offer', userId, { sdp: offer, name: userName });
+      } catch (e) {
+        console.error("Failed to create offer for new user", e);
+      }
     });
 
     socket.on('existing-users', (users: { userId: string, name: string }[]) => {
-      users.forEach(async (u) => {
+      users.forEach((u) => {
         peerNamesRef.current.set(u.userId, u.name);
         addPeerToState(u.userId, u.name);
-        
-        // Initiate WebRTC connection to existing users
-        const pc = createPeerConnection(u.userId);
-        try {
-          const offer = await pc.createOffer();
-          await pc.setLocalDescription(offer);
-          socket.emit('webrtc-offer', u.userId, { sdp: offer, name: userName });
-        } catch (e) {
-          console.error("Failed to create offer for existing user", e);
-        }
+        createPeerConnection(u.userId);
       });
     });
 
@@ -187,8 +187,16 @@ export default function Room() {
   };
 
   const createPeerConnection = (targetId: string) => {
+    if (peersRef.current.has(targetId)) {
+      return peersRef.current.get(targetId)!;
+    }
+
     const pc = new RTCPeerConnection({
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' }
+      ]
     });
 
     pc.onicecandidate = (event) => {

@@ -12,6 +12,8 @@ spec:
       app: signaling-service
   template:
     metadata:
+      annotations:
+        instrumentation.opentelemetry.io/inject-nodejs: "false"
       labels:
         app: signaling-service
     spec:
