@@ -239,9 +239,20 @@ export default function Room() {
     };
 
     if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(track => {
-        pc.addTrack(track, localStreamRef.current!);
-      });
+      const audioTrack = localStreamRef.current.getAudioTracks()[0];
+      const videoTrack = localStreamRef.current.getVideoTracks()[0];
+
+      if (audioTrack) {
+        pc.addTrack(audioTrack, localStreamRef.current);
+      } else {
+        pc.addTransceiver('audio', { direction: 'recvonly' });
+      }
+
+      if (videoTrack) {
+        pc.addTrack(videoTrack, localStreamRef.current);
+      } else {
+        pc.addTransceiver('video', { direction: 'recvonly' });
+      }
     } else {
       pc.addTransceiver('video', { direction: 'recvonly' });
       pc.addTransceiver('audio', { direction: 'recvonly' });
@@ -285,27 +296,44 @@ export default function Room() {
   };
 
   const RemotePeer = ({ peer }: { peer: { id: string, name: string, stream: MediaStream | null } }) => {
-    const ref = useRef<HTMLVideoElement>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const audioRef = useRef<HTMLAudioElement>(null);
+
     useEffect(() => {
-      if (ref.current && peer.stream) {
-        ref.current.srcObject = peer.stream;
-        ref.current.volume = 1.0;
-        ref.current.play().catch(err => {
-          console.warn('Remote peer media play error:', err);
-        });
+      if (peer.stream) {
+        if (videoRef.current) {
+          videoRef.current.srcObject = peer.stream;
+          videoRef.current.play().catch(err => {
+            console.warn('Remote peer video play error:', err);
+          });
+        }
+        if (audioRef.current) {
+          audioRef.current.srcObject = peer.stream;
+          audioRef.current.volume = 1.0;
+          audioRef.current.play().catch(err => {
+            console.warn('Remote peer audio play error:', err);
+          });
+        }
       }
     }, [peer.stream]);
 
     return (
       <div className="glass-card" style={{ background: 'rgba(0,0,0,0.8)', borderRadius: '16px', overflow: 'hidden', minHeight: '300px', position: 'relative' }}>
         {peer.stream ? (
-          <video 
-            ref={ref} 
-            autoPlay 
-            playsInline 
-            controls={false}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-          />
+          <>
+            <video 
+              ref={videoRef} 
+              autoPlay 
+              playsInline 
+              muted
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+            />
+            <audio 
+              ref={audioRef} 
+              autoPlay 
+              playsInline 
+            />
+          </>
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-secondary)' }}>
             No video from {peer.name}
