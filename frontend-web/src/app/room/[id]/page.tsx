@@ -76,14 +76,36 @@ export default function Room() {
 
     socket.on('user-joined', async ({ userId, name }) => {
       setMessages(prev => [...prev, { sender: 'System', text: `${name || 'A peer'} joined the room.` }]);
-      
       peerNamesRef.current.set(userId, name || 'Unknown');
       addPeerToState(userId, name || 'Unknown');
+    });
 
-      const pc = createPeerConnection(userId);
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      socket.emit('webrtc-offer', userId, { sdp: offer, name: userName });
+    socket.on('existing-users', (users: { userId: string, name: string }[]) => {
+      users.forEach(async (u) => {
+        peerNamesRef.current.set(u.userId, u.name);
+        addPeerToState(u.userId, u.name);
+        
+        // Initiate WebRTC connection to existing users
+        const pc = createPeerConnection(u.userId);
+        try {
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+          socket.emit('webrtc-offer', u.userId, { sdp: offer, name: userName });
+        } catch (e) {
+          console.error("Failed to create offer for existing user", e);
+        }
+      });
+    });
+
+    socket.on('user-left', ({ userId }) => {
+      const peerName = peerNamesRef.current.get(userId) || 'A peer';
+      setMessages(prev => [...prev, { sender: 'System', text: `${peerName} left the room.` }]);
+      removePeerFromState(userId);
+      const pc = peersRef.current.get(userId);
+      if (pc) {
+        pc.close();
+        peersRef.current.delete(userId);
+      }
     });
 
     socket.on('webrtc-offer', async ({ senderId, offer: payload }) => {
@@ -131,6 +153,13 @@ export default function Room() {
     // Announce ourselves
     socket.emit('join-room', roomId, { name: userName });
   };
+
+  // Re-attach local stream when room becomes active
+  useEffect(() => {
+    if (hasJoined && localVideoRef.current && localStreamRef.current) {
+      localVideoRef.current.srcObject = localStreamRef.current;
+    }
+  }, [hasJoined]);
 
   // 3. Cleanup on Unmount
   useEffect(() => {
