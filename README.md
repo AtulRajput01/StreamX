@@ -9,21 +9,20 @@ StreamX is a scalable, cloud-native microservices platform for real-time video c
 ```mermaid
 flowchart TD
     subgraph Client ["Client Layer"]
+        Browser["User Browser / Client"]
+    end
+
+    subgraph IngressLayer ["Ingress & Load Balancing"]
+        ALB["AWS Load Balancer (ELB / ACM SSL Port 443)"]
+        NginxIngress["NGINX Ingress Controller"]
+    end
+
+    subgraph ClusterServices ["Kubernetes Microservices (live-stream)"]
         Frontend["Frontend Web (Next.js - Port 3000)"]
-    end
-
-    subgraph Ingress ["Kubernetes Ingress"]
-        NginxIngress["NGINX Ingress Controller / ALB"]
-    end
-
-    subgraph Gateway ["API & Routing"]
         APIGateway["API Gateway (Port 4000)"]
-    end
-
-    subgraph Services ["Microservices Layer"]
+        SignalingService["Signaling Service - WebSockets (Port 4003)"]
         AuthService["Auth Service (Port 4001)"]
         MeetingService["Meeting Service (Port 4002)"]
-        SignalingService["Signaling Service - WebSockets (Port 4003)"]
     end
 
     subgraph Stateful ["Stateful & Infrastructure Layer (StatefulSets)"]
@@ -32,18 +31,20 @@ flowchart TD
         Redpanda[(Redpanda - Kafka Event Broker)]
     end
 
-    %% Routing Flow
-    Frontend -->|HTTP / WebSockets| NginxIngress
-    NginxIngress -->|/| Frontend
-    NginxIngress -->|/api| APIGateway
-    NginxIngress -->|/socket.io| SignalingService
+    %% External Traffic Entry
+    Browser -->|HTTPS / WSS| ALB
+    ALB -->|HTTP Port 80| NginxIngress
+
+    %% Ingress Path Routing Rules
+    NginxIngress -->|Path: /| Frontend
+    NginxIngress -->|Path: /api| APIGateway
+    NginxIngress -->|Path: /socket.io| SignalingService
 
     %% API Gateway Proxies
     APIGateway -->|/api/auth| AuthService
     APIGateway -->|/api/meetings| MeetingService
-    APIGateway -->|/socket.io| SignalingService
 
-    %% Service Connections
+    %% Service Connections to Stateful Layer
     AuthService -->|User Auth & JWT| Postgres
     MeetingService -->|Meeting Schema| Postgres
     SignalingService -->|WebSockets State / Adapter| Redis
